@@ -22,7 +22,7 @@ public class MainActivity extends AppCompatActivity implements RecyclerView.OnSc
     @BindView(R.id.recyclerView)
     RecyclerView recyclerView;
 
-    RecyclerView.LayoutManager layoutManager;
+    LinearLayoutManager layoutManager;
     MyRecyclerViewAdapter adapter;
 
     public static final int SCROLL_STATE_IDLE = 0;
@@ -30,6 +30,8 @@ public class MainActivity extends AppCompatActivity implements RecyclerView.OnSc
     public static final int SCROLL_STATE_DRAGGING = 1;
 
     public static final int SCROLL_STATE_SETTLING = 2;
+
+    Handler handler = new Handler();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,45 +69,64 @@ public class MainActivity extends AppCompatActivity implements RecyclerView.OnSc
                 super.onScrolled(recyclerView, dx, dy);
             }
         });
-    }
 
-    @Override
-    public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+        recyclerView.setOnFlingListener(new RecyclerView.OnFlingListener() {
+            @Override
+            public boolean onFling(int velocityX, int velocityY) {
+                    // This performs a singular item scroll on fling.
+                    final int visible = layoutManager.findFirstVisibleItemPosition();
+                    if (visible < (layoutManager.getItemCount() - 1)) {
+                        if (velocityY > 0) {
+                            recyclerView.smoothScrollToPosition(visible + 1);
+                        } else {
 
+                            recyclerView.smoothScrollToPosition(visible);
+                        }
+                    }
+                return false;
+            }
+        });
     }
 
     @Override
     public void nextQuestion() {
         hideKeyboard();
 
-        Handler handler = new Handler();
+
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                int nextPosition = ((LinearLayoutManager)recyclerView.getLayoutManager()).findLastVisibleItemPosition() + 1;
+                int nextPosition = layoutManager.findLastVisibleItemPosition() + 1;
                 recyclerView.smoothScrollToPosition(nextPosition);
             }
         }, 100);
     }
 
     private void showKeyboard(RecyclerView recyclerView) {
-        int completelyVisibleItemPosition = ((LinearLayoutManager)recyclerView.getLayoutManager()).findFirstCompletelyVisibleItemPosition();
+        int completelyVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
         View view = recyclerView.getLayoutManager().findViewByPosition(completelyVisibleItemPosition);
         if (view instanceof ViewGroup && ((ViewGroup)view).getChildCount() > 1) {
-            EditText editText = (EditText) ((ViewGroup) ((LinearLayoutManager) recyclerView.getLayoutManager()).findViewByPosition(completelyVisibleItemPosition)).getChildAt(1);
-            editText.requestFocus();
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+            EditText editText = (EditText) ((ViewGroup) recyclerView.getLayoutManager().findViewByPosition(completelyVisibleItemPosition)).getChildAt(1);
+            if (editText.getText().length() == 0) {
+                editText.requestFocus();
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+            }
         }
     }
 
     private void hideKeyboard() {
-        int completelyVisibleItemPosition = ((LinearLayoutManager)recyclerView.getLayoutManager()).findFirstCompletelyVisibleItemPosition();
+        int completelyVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
         View view = recyclerView.getLayoutManager().findViewByPosition(completelyVisibleItemPosition);
         if (view instanceof ViewGroup && ((ViewGroup)view).getChildCount() > 1) {
             EditText editText = (EditText) ((ViewGroup) recyclerView.getLayoutManager().findViewByPosition(completelyVisibleItemPosition)).getChildAt(1);
             InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
             imm.hideSoftInputFromWindow(editText.getWindowToken(), 0);
         }
+    }
+
+    @Override
+    public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+
     }
 }
